@@ -8,11 +8,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 import org.acme.github.issues.client.SDMApiClient;
 import org.acme.github.issues.model.AppConfig;
@@ -38,13 +38,14 @@ public class ConfigManager {
     @Inject
     ApiManager apiManager;
 
-    private JsonObject configQuery;
+    private JsonObject getConfigQuery;
+    private String createConfigQueryStr;
     private Map<String, List<AppConfig>> installations;
 
     public Map<String, List<AppConfig>> getInstallations() {
         if (installations == null) {
             SDMAuth auth = new SDMAuth(apiManager.createToken("acme-issues"));
-            JsonObject response = sdmApiClient.executeQuery("acme-issues", auth, getConfigQuery());
+            JsonObject response = sdmApiClient.executeQuery("acme-issues", auth, getGetConfigQuery());
 
             if (response.getJsonArray("errors").size() > 0) {
                 LOGGER.error("Error fetching config: {}", response.getJsonArray("errors"));
@@ -76,11 +77,18 @@ public class ConfigManager {
             LOGGER.info("Updating existing app config for account {} for githubAccount {} and installationId {}", account, githubAccount, installationId);
         } else {
             LOGGER.info("Creating new app config for account {} for githubAccount {} and installationId {}", account, githubAccount, installationId);
+            SDMAuth auth = new SDMAuth(apiManager.createToken("acme-issues"));
+            JsonObject query = getCreateConfigQuery(appId, account, githubAccount, installationId);
+            JsonObject response = sdmApiClient.executeQuery("acme-issues", auth, query);
+
+            if (response.getJsonArray("errors").size() > 0) {
+                LOGGER.error("Error creating config ({}): {}", query, response.getJsonArray("errors"));
+            }
         }
     }
 
-    private JsonObject getConfigQuery() {
-        if (configQuery == null) {
+    private JsonObject getGetConfigQuery() {
+        if (getConfigQuery == null) {
             String query = null;
             try (InputStream is = WebhookResource.class.getResourceAsStream("config-query.graphql")) {
                 query = IOUtils.toString(is, Charset.defaultCharset());
@@ -88,15 +96,50 @@ public class ConfigManager {
                 LOGGER.error("Error parsing data mutation query file", e);
             }
 
-            configQuery = Json.createObjectBuilder()
-                    .add("query", query)
-                    .add("variables", Json.createObjectBuilder()
+            getConfigQuery = Json.createObjectBuilder()
+                                 .add("query", query)
+                                 .add("variables", Json.createObjectBuilder()
                         .add("appId", appId)
                         .build())
-                    .add("operationName", "getConfigs")
-                    .build();
+                                 .add("operationName", "getConfigs")
+                                 .build();
         }
 
-        return configQuery;
+        return getConfigQuery;
+    }
+
+    private JsonObject getCreateConfigQuery(String appId, String account, String githubAccount, String installationId) {
+        if (createConfigQueryStr == null) {
+            String queryStr = null;
+            try (InputStream is = WebhookResource.class.getResourceAsStream("add-config.graphql")) {
+                queryStr = IOUtils.toString(is, Charset.defaultCharset());
+            } catch (IOException e) {
+                LOGGER.error("Error parsing config creation query file", e);
+            }
+            createConfigQueryStr = queryStr;
+        }
+
+        JsonObject config = Json.createObjectBuilder()
+                .add("appId", appId)
+                .add("account", account)
+                .add("config", Json.createObjectBuilder()
+                     .add("githubAccounts", Json.createArrayBuilder()
+                        .add(Json.createObjectBuilder()
+                                 .add("account", githubAccount)
+                                 .add("installationId", installationId)
+                                 .build())
+                        ).build()
+
+                ).build();
+
+        System.out.println("config=" + config);
+
+        JsonObject createConfigQuery = Json.createObjectBuilder()
+                             .add("query", createConfigQueryStr)
+                             .add("variables", Json.createObjectBuilder()
+                                                   .add("config", config).build())
+                             .add("operationName", "addConfig")
+                             .build();
+        return createConfigQuery;
     }
 }

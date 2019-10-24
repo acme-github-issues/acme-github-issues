@@ -1,0 +1,12 @@
+mutation addConfig($config:ConfigMutatorAddInput!) {
+  config {
+    add(input:$config) {
+      config {
+        account
+        appId
+        config
+        id
+      }
+    }
+  }
+}
