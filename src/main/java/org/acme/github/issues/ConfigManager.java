@@ -70,6 +70,15 @@ public class ConfigManager {
         return installations;
     }
 
+    public void writeAccountInstallation(String account, String githubAccount, String installationId) {
+        Map<String, List<AppConfig>> installations = getInstallations();
+        if (installations.containsKey(account)) {
+            LOGGER.info("Updating existing app config for account {} for githubAccount {} and installationId {}", account, githubAccount, installationId);
+        } else {
+            LOGGER.info("Creating new app config for account {} for githubAccount {} and installationId {}", account, githubAccount, installationId);
+        }
+    }
+
     private JsonObject getConfigQuery() {
         if (configQuery == null) {
             String query = null;

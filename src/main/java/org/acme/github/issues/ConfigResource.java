@@ -26,6 +26,9 @@ public class ConfigResource {
     @Inject
     GitHubService gitHubService;
 
+    @Inject
+    ConfigManager configManager;
+
     @POST
     @Consumes("application/json")
     @Produces("application/json")
@@ -73,6 +76,17 @@ public class ConfigResource {
             LOGGER.warn("Unable to lookup installation {} within GitHub", installationId, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new ApiError("Unable to lookup installation " + installationId))
+                    .build();
+        }
+
+        String githubAccount = matchingInstallation.get().getJsonObject("account").getString("login");
+
+        try {
+            configManager.writeAccountInstallation(sdmAccount, githubAccount, installationId);
+        } catch (Exception e) {
+            LOGGER.warn("Unable to write account installation for id {}", installationId, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ApiError("Unable to write config for installation" + installationId + "."))
                     .build();
         }
 
