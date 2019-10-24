@@ -1,6 +1,5 @@
 package org.acme.github.issues;
 
-import io.quarkus.runtime.StartupEvent;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -11,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
