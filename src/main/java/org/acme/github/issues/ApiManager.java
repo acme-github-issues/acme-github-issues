@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 public class ApiManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiManager.class);
 
-    @ConfigProperty(name = "app.private.key", defaultValue = "sdm-app-private-key.pem")
+    @ConfigProperty(name = "sdm.app.private.key", defaultValue = "sdm-app-private-key.pem")
     String privateKey;
 
     @ConfigProperty(name = "sdm.api.url", defaultValue = "https://devoptics.devoptics-dev.beescloud.com")
